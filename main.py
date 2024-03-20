@@ -1,30 +1,34 @@
 import pygame
 import random
 import math
+import psutil
 
 WIDTH = 800
 HEIGHT = 600
-NUM_BALLS = 10
+NUM_BALLS = 15
 MIN_RADIUS = 10
 MAX_RADIUS = 30
 MAX_SPEED = 5
 NEW_BALL_RADIUS = 20
-NEW_BALL_COLOR = (0, 0, 255) # New ball color -> blue
-LINE_COLOR = (255, 0, 0)  # New ball trajectory line color -> red
+NEW_BALL_COLOR = [0, 0, 255] # New ball color -> blue
+LINE_COLOR = [255, 0, 0]  # New ball trajectory line color -> red
+VELOCITY_SCALAR = 1
+COLOR_SCALAR = 1
 
 class Ball:
     def __init__(self, x, y, radius, color, dx=0, dy=0):
         self.x = x
         self.y = y
         self.radius = radius
-        self.color = color
+        self.start_color = color[:]
+        self.color = color[:]
         self.dx = dx
         self.dy = dy
         self.mass = math.pi * radius ** 2  # Mass based on area
 
     def update(self):
-        self.x += self.dx
-        self.y += self.dy
+        self.x += self.dx * VELOCITY_SCALAR
+        self.y += self.dy * VELOCITY_SCALAR
 
         # BBounce off walls by negating either dx (left and right walls) or dy (top and bottom walls)
         if self.x - self.radius <= 0:
@@ -41,6 +45,11 @@ class Ball:
             self.y = HEIGHT - self.radius
             self.dy *= -1
 
+        self.color[0] = int(self.start_color[0] * COLOR_SCALAR)
+        self.color[1] = int(self.start_color[1] * COLOR_SCALAR)
+        self.color[2] = int(self.start_color[2] * COLOR_SCALAR)
+
+
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.radius)
 
@@ -56,7 +65,7 @@ for _ in range(NUM_BALLS):
     x = random.randint(MAX_RADIUS, WIDTH - MAX_RADIUS)
     y = random.randint(MAX_RADIUS, HEIGHT - MAX_RADIUS)
     radius = random.randint(MIN_RADIUS, MAX_RADIUS)
-    color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    color = [random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)]
     dx = random.randint(-MAX_SPEED, MAX_SPEED)
     dy = random.randint(-MAX_SPEED, MAX_SPEED)
     ball = Ball(x, y, radius, color, dx, dy)
@@ -120,7 +129,14 @@ def rotate_point_180(start_pos, end_pos):
 
     return flipped_end_pos
 
+# Define variables for timing or frame counting
+psutil_timer = 0  # Timer for psutil function calls
+psutil_interval = 1000  # Interval in milliseconds (e.g., call every 1000 ms or 1 second)
+frame_counter = 0  # Counter for frames
+frame_interval = 15  # Interval in frames (e.g., call every 60 frames)
+
 while running:
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -129,7 +145,7 @@ while running:
                 dragging = True
                 start_pos = event.pos
                 end_pos = event.pos
-                preview_ball = Ball(start_pos[0], start_pos[1], NEW_BALL_RADIUS, (random.randint(0,255),random.randint(0,255),random.randint(0,255)))
+                preview_ball = Ball(start_pos[0], start_pos[1], NEW_BALL_RADIUS, [random.randint(0,255),random.randint(0,255),random.randint(0,255)])
                 preview_ball.draw(screen)
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1 and preview_ball is not None:  # Left mouse button
@@ -150,6 +166,19 @@ while running:
                     dy = start_pos[1] - end_pos[1]
                     preview_ball.dx = dx / 10
                     preview_ball.dy = dy / 10
+
+    # Increment frame counter
+    frame_counter += 1
+
+    # Check if it's time to call psutil functions based on the frame counter
+    if frame_counter >= frame_interval:
+        VELOCITY_SCALAR = max(1- psutil.cpu_percent() / 100, .5)
+        COLOR_SCALAR = VELOCITY_SCALAR
+        # print(COLOR_SCALAR)
+
+
+        # Reset frame counter
+        frame_counter = 0
 
     screen.fill((255, 255, 255))  # White background color
 
@@ -172,6 +201,6 @@ while running:
         preview_ball.draw(screen)
 
     pygame.display.flip()
-    clock.tick(60)  # Set FPS upperbound to 60
+    clock.tick(80)  # Set FPS upperbound to 60
 
 pygame.quit()
