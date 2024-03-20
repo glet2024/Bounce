@@ -130,8 +130,6 @@ def rotate_point_180(start_pos, end_pos):
     return flipped_end_pos
 
 # Define variables for timing or frame counting
-psutil_timer = 0  # Timer for psutil function calls
-psutil_interval = 1000  # Interval in milliseconds (e.g., call every 1000 ms or 1 second)
 frame_counter = 0  # Counter for frames
 frame_interval = 15  # Interval in frames (e.g., call every 60 frames)
 
@@ -170,9 +168,8 @@ while running:
     # Increment frame counter
     frame_counter += 1
 
-    # Check if it's time to call psutil functions based on the frame counter
     if frame_counter >= frame_interval:
-        VELOCITY_SCALAR = max(1- psutil.cpu_percent() / 100, .5)
+        VELOCITY_SCALAR = max(1 - psutil.cpu_percent() / 100, .5)
         COLOR_SCALAR = VELOCITY_SCALAR
         # print(COLOR_SCALAR)
 
@@ -201,6 +198,6 @@ while running:
         preview_ball.draw(screen)
 
     pygame.display.flip()
-    clock.tick(80)  # Set FPS upperbound to 60
+    clock.tick(80)  # Set FPS upperbound to 80
 
 pygame.quit()
