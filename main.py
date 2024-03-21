@@ -6,19 +6,8 @@ import copy
 import tkinter as tk
 from gui import CheckboxWindow
 
-root = tk.Tk()
-gui = CheckboxWindow(root, True, True, True, True)
-gui.get_bool_vars_on_close()
-root.mainloop()
-
-CPU_VELOCITY = gui.cpu_velocity
-CPU_COLOR = gui.cpu_color
-MEMORY_GRAVITY = gui.memory_gravity
-print(MEMORY_GRAVITY)
-
 WIDTH = 800
 HEIGHT = 600
-NUM_BALLS = gui.ball_num
 MIN_RADIUS = 10
 MAX_RADIUS = 30
 MAX_SPEED = 5
@@ -29,6 +18,16 @@ VELOCITY_SCALAR = 1
 COLOR_SCALAR = 1
 RADIUS_SCALAR = 1
 GRAVITY_SCALAR = psutil.virtual_memory().percent / 100
+
+root = tk.Tk()
+gui = CheckboxWindow(root, True, True, True, NEW_BALL_RADIUS, True)
+gui.get_bool_vars_on_close()
+root.mainloop()
+
+CPU_VELOCITY = gui.cpu_velocity
+CPU_COLOR = gui.cpu_color
+MEMORY_GRAVITY = gui.memory_gravity
+NUM_BALLS = gui.ball_num
 
 
 class Ball:
@@ -198,7 +197,7 @@ while running:
                     preview_ball.dy = dy / 10
         elif event.type == pygame.KEYUP:
             root = tk.Tk()
-            gui = CheckboxWindow(root, CPU_VELOCITY, CPU_COLOR, MEMORY_GRAVITY, False)
+            gui = CheckboxWindow(root, CPU_VELOCITY, CPU_COLOR, MEMORY_GRAVITY, NEW_BALL_RADIUS, False)
             gui.get_bool_vars_on_close()
             root.mainloop()
             CPU_VELOCITY = gui.cpu_velocity
@@ -206,6 +205,7 @@ while running:
             MEMORY_GRAVITY = gui.memory_gravity
             if gui.reset_balls:
                 balls = []
+            NEW_BALL_RADIUS = gui.new_ball_radius
 
     # Increment frame counter
     frame_counter += 1
