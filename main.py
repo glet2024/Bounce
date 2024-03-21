@@ -2,10 +2,23 @@ import pygame
 import random
 import math
 import psutil
+import copy
+import tkinter as tk
+from gui import CheckboxWindow
+
+root = tk.Tk()
+gui = CheckboxWindow(root, True, True, True, True)
+gui.get_bool_vars_on_close()
+root.mainloop()
+
+CPU_VELOCITY = gui.cpu_velocity
+CPU_COLOR = gui.cpu_color
+MEMORY_GRAVITY = gui.memory_gravity
+print(MEMORY_GRAVITY)
 
 WIDTH = 800
 HEIGHT = 600
-NUM_BALLS = 15
+NUM_BALLS = gui.ball_num
 MIN_RADIUS = 10
 MAX_RADIUS = 30
 MAX_SPEED = 5
@@ -14,12 +27,16 @@ NEW_BALL_COLOR = [0, 0, 255] # New ball color -> blue
 LINE_COLOR = [255, 0, 0]  # New ball trajectory line color -> red
 VELOCITY_SCALAR = 1
 COLOR_SCALAR = 1
+RADIUS_SCALAR = 1
+GRAVITY_SCALAR = psutil.virtual_memory().percent / 100
+
 
 class Ball:
     def __init__(self, x, y, radius, color, dx=0, dy=0):
         self.x = x
         self.y = y
-        self.radius = radius
+        self.start_radius = copy.deepcopy(radius)
+        self.radius = copy.deepcopy(radius)
         self.start_color = color[:]
         self.color = color[:]
         self.dx = dx
@@ -30,6 +47,7 @@ class Ball:
         self.x += self.dx * VELOCITY_SCALAR
         self.y += self.dy * VELOCITY_SCALAR
 
+        self.radius = self.start_radius * RADIUS_SCALAR
         # BBounce off walls by negating either dx (left and right walls) or dy (top and bottom walls)
         if self.x - self.radius <= 0:
             self.x = self.radius
@@ -107,6 +125,20 @@ def handle_collision(ball1, ball2):
         ball2.dx = tangential_x * dp_tangent_2 + nx * m2
         ball2.dy = tangential_y * dp_tangent_2 + ny * m2
 
+def apply_gravity(ball1, ball2):
+    dx = ball2.x - ball1.x
+    dy = ball2.y - ball1.y
+    distance = max(math.sqrt(dx ** 2 + dy ** 2), 0.1)  # Prevent distance = 0 since we divide by it later
+
+    # Calculate gravitational force
+    force_magnitude = GRAVITY_SCALAR * (ball1.mass * ball2.mass) / (distance ** 2)
+
+    # Apply force components to velocity components
+    ball1.dx += force_magnitude * (dx / distance) / ball1.mass
+    ball1.dy += force_magnitude * (dy / distance) / ball1.mass
+    ball2.dx -= force_magnitude * (dx / distance) / ball2.mass
+    ball2.dy -= force_magnitude * (dy / distance) / ball2.mass
+
 running = True
 clock = pygame.time.Clock()
 
@@ -164,14 +196,34 @@ while running:
                     dy = start_pos[1] - end_pos[1]
                     preview_ball.dx = dx / 10
                     preview_ball.dy = dy / 10
+        elif event.type == pygame.KEYUP:
+            root = tk.Tk()
+            gui = CheckboxWindow(root, CPU_VELOCITY, CPU_COLOR, MEMORY_GRAVITY, False)
+            gui.get_bool_vars_on_close()
+            root.mainloop()
+            CPU_VELOCITY = gui.cpu_velocity
+            CPU_COLOR = gui.cpu_color
+            MEMORY_GRAVITY = gui.memory_gravity
+            if gui.reset_balls:
+                balls = []
 
     # Increment frame counter
     frame_counter += 1
 
     if frame_counter >= frame_interval:
-        VELOCITY_SCALAR = max(1 - psutil.cpu_percent() / 100, .5)
-        COLOR_SCALAR = VELOCITY_SCALAR
-        # print(COLOR_SCALAR)
+        cpu_percent = psutil.cpu_percent()
+        if CPU_VELOCITY:
+            VELOCITY_SCALAR = max(1 - cpu_percent / 100, .5)
+        else:
+            VELOCITY_SCALAR = 1
+
+        if CPU_COLOR:
+            COLOR_SCALAR = max(1 - cpu_percent / 100, .5)
+        else:
+            COLOR_SCALAR = 1
+
+        GRAVITY_SCALAR = psutil.virtual_memory().percent / 100
+
 
 
         # Reset frame counter
@@ -184,9 +236,11 @@ while running:
         ball.update()
         ball.draw(screen)
 
-        # Check for collision with other balls
+        # Check for collision and apply gravity
         for other_ball in balls[i + 1:]:
             handle_collision(ball, other_ball)
+            if MEMORY_GRAVITY:
+                apply_gravity(ball, other_ball)
 
     # Draw trajectory line
     if dragging:
